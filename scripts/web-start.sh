@@ -20,7 +20,7 @@ echo "Starting static web host on 0.0.0.0:8081..."
 )
 
 sleep 1
-if ! kill -0 "$(cat web/web.pid)" 2>/dev/null; then
+if ! kill -0 "$(cat pids/web.pid)" 2>/dev/null; then
   echo "ERROR: Web host failed to start:"
   tail -n 40 logs/web-console.log 2>/dev/null || true
   exit 1
