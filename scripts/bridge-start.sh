@@ -23,6 +23,8 @@ if [[ -z "$CONFIG" ]]; then
   ./scripts/stop.sh
 fi
 
+# Restart the proxy so the listener changes are loaded even if it was already running.
+./scripts/stop.sh || true
 ./scripts/configure-bridge.sh
 ./scripts/start.sh
 echo
