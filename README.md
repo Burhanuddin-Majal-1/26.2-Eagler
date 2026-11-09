@@ -1,18 +1,19 @@
 # 26.2-Eagler
 
-Eaglercraft web client and Minecraft server stack using Paper, Velocity, and the official EaglerXServer Velocity plugin.
+Browser client hosting and Minecraft server stack using Paper, Velocity, and the official EaglerXServer Velocity plugin.
 
 ## Network layout
 
+- Browser website (HTTP): `0.0.0.0:8081`
 - Eaglercraft WebSocket bridge: `0.0.0.0:8082`
 - Java Edition Velocity proxy: `0.0.0.0:25565`
 - Private Paper backend: `127.0.0.1:25566`
 
-Keep the Paper backend private. Browser players connect through the EaglerXServer WebSocket listener on port 8082.
+This keeps the same user-facing flow as the reference EaglercraftX-Server project: open the website to load the browser entry page, then the client connects to the WebSocket endpoint. This repository keeps its existing Velocity + Paper architecture rather than replacing it with the older BungeeCord/Waterfall stack.
 
 ## Start the server
 
-Run these commands from the repository root in the Codespace or Linux host:
+Run from the repository root in the Codespace or Linux host:
 
 ```bash
 git pull origin main
@@ -20,34 +21,45 @@ chmod +x scripts/*.sh
 ./scripts/bridge-start.sh
 ```
 
-The first run installs the official EaglerXServer 1.1.1 plugin, starts Paper and Velocity to generate the plugin configuration, configures the WebSocket listener on port 8082, then restarts the network.
+The bridge startup script installs EaglerXServer, generates its configuration on first run, configures the WebSocket listener on port 8082, then starts Paper, Velocity, and the static website host.
 
-For later starts, the same command is safe to run again. To stop both servers:
+For later starts, use the same command. To stop the services:
 
 ```bash
 ./scripts/stop.sh
 ```
 
-Logs:
-- `server/paper-console.log`
-- `proxy/velocity-console.log`
+## Website and client files
+
+The static website is served from the `web/` directory on port **8081**.
+
+- Entry page: `web/index.html`
+- Client entry expected at: `web/client/index.html`
+- Client assets: keep them in their original relative folder structure under `web/client/`
+
+The repository currently includes the website entry page, not a compiled game client distribution. Add your own compiled browser-client files under `web/client/` before expecting the Launch Client link to open the game. The static host does not compile or generate the client.
 
 ## Codespaces port forwarding
 
-After startup, open the **Ports** tab in Codespaces and forward port **8082** for browser clients. Forward port **25565** only if Java Edition players also need to join. Do not expose port 25566.
+Open the **Ports** tab and forward:
 
-Use the HTTPS/WSS address shown for forwarded port 8082 as the WebSocket address in the Eaglercraft client. If friends need to connect, the forwarded port must be made accessible to them in the Ports tab.
+- **8081** — website; open its HTTPS URL in your browser
+- **8082** — Eaglercraft WebSocket; use its WSS URL in the browser client's Direct Connect field
+- **25565** — optional Java Edition access
 
-## Important compatibility note
+Do not expose port **25566**; it is the private Paper backend.
 
-EaglerXServer 1.1.1 officially documents support for EaglercraftX 1.8, Eaglercraft 1.12.2, and Eaglercraft 1.5.2 clients. Compatibility with a custom client labelled **26.2 / Zeus** is not confirmed by the upstream project. The bridge can start successfully while a client with an unsupported protocol still fails to join.
+## Compatibility
 
-If the bridge starts but the client reports a protocol or handshake error, check the client protocol compatibility before changing the Paper or Velocity ports.
+EaglerXServer 1.1.1 documents support for EaglercraftX 1.8, Eaglercraft 1.12.2, and Eaglercraft 1.5.2 clients. Compatibility with a custom client labelled **26.2 / Zeus** is not confirmed. A working website and open WebSocket port do not guarantee that an unsupported client protocol can join.
 
-## Configuration
+## Configuration and logs
 
 - Velocity template: `proxy/velocity.toml.example`
 - Runtime Velocity config: `proxy/velocity.toml` (generated locally and ignored by Git)
-- EaglerXServer runtime config: generated under `proxy/plugins/`
+- EaglerXServer config: `proxy/plugins/eaglerxserver/`
+- Website log: `web/web-console.log`
+- Velocity log: `proxy/velocity-console.log`
+- Paper log: `server/paper-console.log`
 
-The plugin installer verifies the official release JAR using its published SHA-256 digest.
+The EaglerXServer installer verifies the downloaded release JAR with SHA-256.
