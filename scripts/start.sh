@@ -3,9 +3,7 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-for bin in java; do
-  command -v "$bin" >/dev/null || { echo "ERROR: Java is required"; exit 1; }
-done
+command -v java >/dev/null || { echo "ERROR: Java is required"; exit 1; }
 [[ -s server/paper.jar ]] || { echo "ERROR: server/paper.jar is missing"; exit 1; }
 [[ -s proxy/velocity.jar ]] || { echo "ERROR: proxy/velocity.jar is missing"; exit 1; }
 [[ -s proxy/plugins/EaglerXServer.jar ]] || ./scripts/install-eaglerxserver.sh
@@ -25,11 +23,19 @@ if [[ -f server/paper.pid ]] && kill -0 "$(cat server/paper.pid)" 2>/dev/null; t
 else
   rm -f server/paper.pid
   echo "Starting Paper backend on 127.0.0.1:25566..."
-  (cd server && nohup java -Xms512M -Xmx2G -jar paper.jar --nogui > paper-console.log 2>&1 & echo $! > paper.pid)
+  (
+    cd "$ROOT/server"
+    nohup java -Xms512M -Xmx2G -jar paper.jar --nogui > paper-console.log 2>&1 &
+    echo $! > paper.pid
+  )
 fi
 
-for attempt in {1..60}; do
-  if grep -q 'Done (' server/paper-console.log 2>/dev/null; then break; fi
+PAPER_READY=false
+for attempt in {1..120}; do
+  if grep -q 'Done (' server/paper-console.log 2>/dev/null; then
+    PAPER_READY=true
+    break
+  fi
   if ! kill -0 "$(cat server/paper.pid 2>/dev/null || echo 0)" 2>/dev/null; then
     echo "ERROR: Paper exited during startup. Last log lines:"
     tail -n 60 server/paper-console.log 2>/dev/null || true
@@ -37,13 +43,21 @@ for attempt in {1..60}; do
   fi
   sleep 2
 done
+if [[ "$PAPER_READY" != true ]]; then
+  echo "ERROR: Paper did not report ready within 4 minutes. Check server/paper-console.log."
+  exit 1
+fi
 
 if [[ -f proxy/velocity.pid ]] && kill -0 "$(cat proxy/velocity.pid)" 2>/dev/null; then
   echo "Velocity is already running (PID $(cat proxy/velocity.pid))."
 else
   rm -f proxy/velocity.pid
   echo "Starting Velocity proxy on 0.0.0.0:25565..."
-  (cd proxy && nohup java -Xms256M -Xmx1G -jar velocity.jar > velocity-console.log 2>&1 & echo $! > velocity.pid)
+  (
+    cd "$ROOT/proxy"
+    nohup java -Xms256M -Xmx1G -jar velocity.jar > velocity-console.log 2>&1 &
+    echo $! > velocity.pid
+  )
 fi
 
 sleep 3
@@ -56,5 +70,5 @@ fi
 echo
 echo "Paper backend: 127.0.0.1:25566"
 echo "Velocity Java:  0.0.0.0:25565"
-echo "Eagler WebSocket listener will be configured on 0.0.0.0:8082."
+echo "Eagler WebSocket listener: configure/verify port 8082."
 echo "Logs: server/paper-console.log and proxy/velocity-console.log"
