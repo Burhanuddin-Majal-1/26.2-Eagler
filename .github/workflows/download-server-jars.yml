@@ -1,0 +1,86 @@
+name: Download Paper 26.2 + Velocity
+
+on:
+  workflow_dispatch:
+    inputs:
+      paper_version:
+        description: "Paper Minecraft version"
+        required: true
+        default: "26.2"
+        type: string
+      velocity_version:
+        description: "Velocity version"
+        required: true
+        default: "4.3.1"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: download-server-jars
+  cancel-in-progress: false
+
+jobs:
+  download-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y jq curl
+
+      - name: Download Paper
+        id: paper
+        env:
+          PAPER_VERSION: ${{ inputs.paper_version }}
+        run: |
+          set -euo pipefail
+          VERSION_JSON="$(curl -fsSL "https://api.papermc.io/v2/projects/paper/versions/${PAPER_VERSION}")"
+          BUILD="$(printf '%s' "$VERSION_JSON" | jq -r '.builds[-1]')"
+          BUILD_JSON="$(curl -fsSL "https://api.papermc.io/v2/projects/paper/versions/${PAPER_VERSION}/builds/${BUILD}")"
+          JAR_NAME="$(printf '%s' "$BUILD_JSON" | jq -r '.downloads.application.name')"
+          mkdir -p server
+          curl -fL --retry 3             "https://api.papermc.io/v2/projects/paper/versions/${PAPER_VERSION}/builds/${BUILD}/downloads/${JAR_NAME}"             -o server/paper.jar
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "Downloaded Paper ${PAPER_VERSION} build ${BUILD} (${JAR_NAME})"
+          test -s server/paper.jar
+
+      - name: Download Velocity
+        id: velocity
+        env:
+          VELOCITY_VERSION: ${{ inputs.velocity_version }}
+        run: |
+          set -euo pipefail
+          VERSION_JSON="$(curl -fsSL "https://api.papermc.io/v2/projects/velocity/versions/${VELOCITY_VERSION}")"
+          BUILD="$(printf '%s' "$VERSION_JSON" | jq -r '.builds[-1]')"
+          BUILD_JSON="$(curl -fsSL "https://api.papermc.io/v2/projects/velocity/versions/${VELOCITY_VERSION}/builds/${BUILD}")"
+          JAR_NAME="$(printf '%s' "$BUILD_JSON" | jq -r '.downloads.application.name')"
+          mkdir -p proxy
+          curl -fL --retry 3             "https://api.papermc.io/v2/projects/velocity/versions/${VELOCITY_VERSION}/builds/${BUILD}/downloads/${JAR_NAME}"             -o proxy/velocity.jar
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "Downloaded Velocity ${VELOCITY_VERSION} build ${BUILD} (${JAR_NAME})"
+          test -s proxy/velocity.jar
+
+      - name: Commit JARs to main
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f server/paper.jar proxy/velocity.jar
+          if git diff --cached --quiet; then
+            echo "The downloaded JARs are already up to date."
+            exit 0
+          fi
+          git commit -m "Add/update Paper ${{ inputs.paper_version }} and Velocity ${{ inputs.velocity_version }} JARs"
+          git push origin HEAD:main
+
+      - name: Report downloaded versions
+        run: |
+          echo "Paper ${{ inputs.paper_version }} build ${{ steps.paper.outputs.build }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Velocity ${{ inputs.velocity_version }} build ${{ steps.velocity.outputs.build }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Files committed: `server/paper.jar`, `proxy/velocity.jar`" >> "$GITHUB_STEP_SUMMARY"
