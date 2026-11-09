@@ -58,7 +58,7 @@ EaglerXServer 1.1.1 documents support for EaglercraftX 1.8, Eaglercraft 1.12.2, 
 - Velocity template: `proxy/velocity.toml.example`
 - Runtime Velocity config: `proxy/velocity.toml` (generated locally and ignored by Git)
 - EaglerXServer config: `proxy/plugins/eaglerxserver/`
-- Website log: `web/web-console.log`
+- Website log: `logs/web-console.log`
 - Velocity log: `proxy/velocity-console.log`
 - Paper log: `server/paper-console.log`
 
