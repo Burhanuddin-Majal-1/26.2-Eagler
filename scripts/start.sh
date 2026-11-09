@@ -71,4 +71,10 @@ echo
 echo "Paper backend: 127.0.0.1:25566"
 echo "Velocity Java:  0.0.0.0:25565"
 echo "Eagler WebSocket listener: configure/verify port 8082."
-echo "Logs: server/paper-console.log and proxy/velocity-console.log"
+./scripts/web-start.sh
+
+echo "Website:        0.0.0.0:8081"
+echo "Eagler WebSocket: 0.0.0.0:8082"
+echo "Java Edition:    0.0.0.0:25565"
+echo "Paper backend:   127.0.0.1:25566 (keep private)"
+echo "Logs: server/paper-console.log, proxy/velocity-console.log, web/web-console.log"
