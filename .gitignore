@@ -147,3 +147,14 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+*.jar
+server/world/
+server/world_nether/
+server/world_the_end/
+server/config/
+proxy/config/
+
+# Velocity runtime files
+proxy/forwarding.secret
+proxy/velocity.toml
+proxy/logs/
