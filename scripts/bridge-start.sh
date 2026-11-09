@@ -4,18 +4,18 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 ./scripts/install-eaglerxserver.sh
-CONFIG="$(find proxy/plugins -type f \( -iname 'listeners.yaml' -o -iname 'listeners.yml' \) -print -quit 2>/dev/null || true)"
+CONFIG="$(find proxy/plugins -type f -iname 'listeners.toml' -print -quit 2>/dev/null || true)"
 
 if [[ -z "$CONFIG" ]]; then
   echo "First run: starting the servers once so EaglerXServer can create its config..."
   ./scripts/start.sh
   for _ in {1..30}; do
-    CONFIG="$(find proxy/plugins -type f \( -iname 'listeners.yaml' -o -iname 'listeners.yml' \) -print -quit 2>/dev/null || true)"
+    CONFIG="$(find proxy/plugins -type f -iname 'listeners.toml' -print -quit 2>/dev/null || true)"
     [[ -n "$CONFIG" ]] && break
     sleep 2
   done
   if [[ -z "$CONFIG" ]]; then
-    echo "ERROR: listeners.yaml was not generated. Velocity log:"
+    echo "ERROR: listeners.toml was not generated. Velocity log:"
     tail -n 80 proxy/velocity-console.log 2>/dev/null || true
     ./scripts/stop.sh || true
     exit 1
