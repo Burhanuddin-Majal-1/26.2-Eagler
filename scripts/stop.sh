@@ -22,5 +22,6 @@ stop_one() {
   rm -f "$file"
 }
 # Stop the proxy first so no new connections enter while Paper shuts down.
+stop_one "Website" "web" "web.pid"
 stop_one "Velocity" "proxy" "velocity.pid"
 stop_one "Paper" "server" "paper.pid"
