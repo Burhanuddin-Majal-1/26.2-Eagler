@@ -67,8 +67,26 @@ if ! kill -0 "$(cat proxy/velocity.pid 2>/dev/null || echo 0)" 2>/dev/null; then
   exit 1
 fi
 
+BRIDGE_READY=false
+for attempt in {1..15}; do
+  if python3 -c 'import socket,sys; s=socket.socket(); s.settimeout(1); rc=s.connect_ex(("127.0.0.1",8082)); s.close(); sys.exit(rc)' 2>/dev/null; then
+    BRIDGE_READY=true
+    break
+  fi
+  sleep 1
+done
+if [[ "$BRIDGE_READY" != true ]]; then
+  echo "ERROR: EaglerXServer did not open port 8082."
+  echo "Check proxy/plugins/eaglerxserver/listeners.toml and proxy/velocity-console.log:"
+  tail -n 80 proxy/velocity-console.log 2>/dev/null || true
+  exit 1
+fi
+
+./scripts/web-start.sh
+
 echo
-echo "Paper backend: 127.0.0.1:25566"
-echo "Velocity Java:  0.0.0.0:25565"
-echo "Eagler WebSocket listener: configure/verify port 8082."
-echo "Logs: server/paper-console.log and proxy/velocity-console.log"
+echo "Website:          0.0.0.0:8081"
+echo "Eagler WebSocket: 0.0.0.0:8082"
+echo "Java Edition:    0.0.0.0:25565"
+echo "Paper backend:   127.0.0.1:25566 (keep private)"
+echo "Logs: server/paper-console.log, proxy/velocity-console.log, logs/web-console.log"
