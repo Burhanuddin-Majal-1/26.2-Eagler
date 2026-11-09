@@ -27,6 +27,7 @@ fi
 ./scripts/start.sh
 echo
 echo "Bridge startup requested."
+echo "Website:          port 8081"
 echo "Eagler WebSocket: port 8082"
 echo "Java Edition:     port 25565"
 echo "Paper backend:    127.0.0.1:25566 (keep private)"
