@@ -34,36 +34,48 @@ jobs:
       - name: Install tools
         run: sudo apt-get update && sudo apt-get install -y jq curl
 
-      - name: Download Paper
+      - name: Download Paper from PaperMC Fill API v3
         id: paper
         env:
           PAPER_VERSION: ${{ inputs.paper_version }}
+          USER_AGENT: "26.2-Eagler-GitHub-Actions/1.0 (https://github.com/Burhanuddin-Majal-1/26.2-Eagler)"
         run: |
           set -euo pipefail
-          VERSION_JSON="$(curl -fsSL "https://api.papermc.io/v2/projects/paper/versions/${PAPER_VERSION}")"
-          BUILD="$(printf '%s' "$VERSION_JSON" | jq -r '.builds[-1]')"
-          BUILD_JSON="$(curl -fsSL "https://api.papermc.io/v2/projects/paper/versions/${PAPER_VERSION}/builds/${BUILD}")"
-          JAR_NAME="$(printf '%s' "$BUILD_JSON" | jq -r '.downloads.application.name')"
+          API="https://fill.papermc.io/v3/projects/paper/versions/${PAPER_VERSION}/builds"
+          BUILDS="$(curl -fsSL -H "User-Agent: ${USER_AGENT}" "${API}")"
+          BUILD_JSON="$(printf '%s' "${BUILDS}" | jq -ce '[.[] | select(.channel == "STABLE")][0]')"
+          BUILD="$(printf '%s' "${BUILD_JSON}" | jq -r '.id')"
+          URL="$(printf '%s' "${BUILD_JSON}" | jq -r '.downloads["server:default"].url')"
+          SHA256="$(printf '%s' "${BUILD_JSON}" | jq -r '.downloads["server:default"].checksums.sha256')"
+
+          test -n "${URL}" && test "${URL}" != "null"
           mkdir -p server
-          curl -fL --retry 3             "https://api.papermc.io/v2/projects/paper/versions/${PAPER_VERSION}/builds/${BUILD}/downloads/${JAR_NAME}"             -o server/paper.jar
-          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
-          echo "Downloaded Paper ${PAPER_VERSION} build ${BUILD} (${JAR_NAME})"
+          curl -fL --retry 3 "${URL}" -o server/paper.jar
+          echo "${SHA256}  server/paper.jar" | sha256sum -c -
+          echo "build=${BUILD}" >> "${GITHUB_OUTPUT}"
+          echo "Downloaded Paper ${PAPER_VERSION} build ${BUILD}"
           test -s server/paper.jar
 
-      - name: Download Velocity
+      - name: Download Velocity from PaperMC Fill API v3
         id: velocity
         env:
           VELOCITY_VERSION: ${{ inputs.velocity_version }}
+          USER_AGENT: "26.2-Eagler-GitHub-Actions/1.0 (https://github.com/Burhanuddin-Majal-1/26.2-Eagler)"
         run: |
           set -euo pipefail
-          VERSION_JSON="$(curl -fsSL "https://api.papermc.io/v2/projects/velocity/versions/${VELOCITY_VERSION}")"
-          BUILD="$(printf '%s' "$VERSION_JSON" | jq -r '.builds[-1]')"
-          BUILD_JSON="$(curl -fsSL "https://api.papermc.io/v2/projects/velocity/versions/${VELOCITY_VERSION}/builds/${BUILD}")"
-          JAR_NAME="$(printf '%s' "$BUILD_JSON" | jq -r '.downloads.application.name')"
+          API="https://fill.papermc.io/v3/projects/velocity/versions/${VELOCITY_VERSION}/builds"
+          BUILDS="$(curl -fsSL -H "User-Agent: ${USER_AGENT}" "${API}")"
+          BUILD_JSON="$(printf '%s' "${BUILDS}" | jq -ce '[.[] | select(.channel == "RECOMMENDED")][0] // [.[] | select(.channel == "STABLE")][0] // .[0]')"
+          BUILD="$(printf '%s' "${BUILD_JSON}" | jq -r '.id')"
+          URL="$(printf '%s' "${BUILD_JSON}" | jq -r '.downloads["server:default"].url')"
+          SHA256="$(printf '%s' "${BUILD_JSON}" | jq -r '.downloads["server:default"].checksums.sha256')"
+
+          test -n "${URL}" && test "${URL}" != "null"
           mkdir -p proxy
-          curl -fL --retry 3             "https://api.papermc.io/v2/projects/velocity/versions/${VELOCITY_VERSION}/builds/${BUILD}/downloads/${JAR_NAME}"             -o proxy/velocity.jar
-          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
-          echo "Downloaded Velocity ${VELOCITY_VERSION} build ${BUILD} (${JAR_NAME})"
+          curl -fL --retry 3 "${URL}" -o proxy/velocity.jar
+          echo "${SHA256}  proxy/velocity.jar" | sha256sum -c -
+          echo "build=${BUILD}" >> "${GITHUB_OUTPUT}"
+          echo "Downloaded Velocity ${VELOCITY_VERSION} build ${BUILD}"
           test -s proxy/velocity.jar
 
       - name: Commit JARs to main
